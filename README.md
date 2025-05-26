@@ -46,7 +46,7 @@ MyLugha is a community-driven platform designed to collect and curate linguistic
 ### Prerequisites
 
 - Python 3.8+  
-- Node.js and npm (for frontend development)  
+- React and npm (for frontend development)  
 - Database system (MongoDB or PostgreSQL)  
 - Virtual environment (recommended)  
 
