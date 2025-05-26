@@ -4,7 +4,7 @@ import { authService } from './services/api';
 import { LogIn, User } from 'lucide-react';
 
 function LoginPage({ onLoginSuccess }) {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -15,13 +15,13 @@ function LoginPage({ onLoginSuccess }) {
     setError(null);
     
     try {
-      await authService.login(username, password);
+      await authService.login(email, password);
       if (onLoginSuccess) {
         onLoginSuccess();
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError('Invalid username or password. Please try again.');
+      setError('Invalid email or password. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -43,18 +43,17 @@ function LoginPage({ onLoginSuccess }) {
             {error}
           </div>
         )}
-        
-        <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="username" className="block text-gray-700 font-medium mb-2">
-              Username
+            <label htmlFor="email" className="block text-gray-700 font-medium mb-2">
+              Email
             </label>
             <input
-              type="text"
-              id="username"
+              type="email"
+              id="email"
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>

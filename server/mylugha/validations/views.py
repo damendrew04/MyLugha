@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from rest_framework import generics, permissions, status, filters
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Validation
 from .serializers import ValidationSerializer, ValidationCreateSerializer, ValidationListSerializer
@@ -17,7 +18,7 @@ class ValidationListView(generics.ListAPIView):
     ordering_fields = ['created_at']
     
     def get_queryset(self):
-        # By default, return validations performed by the current user
+        # Return validations performed by the current user
         queryset = Validation.objects.filter(validator=self.request.user)
         
         # Check if we should only return pending validations
@@ -62,17 +63,11 @@ class ValidationCreateView(generics.CreateAPIView):
         
         if existing_validation:
             # User has already validated this contribution
-            return Response(
-                {'error': 'You have already validated this contribution'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            raise ValidationError('You have already validated this contribution')
             
         # Check if user is trying to validate their own contribution
         if contribution.user == self.request.user:
-            return Response(
-                {'error': 'You cannot validate your own contribution'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            raise ValidationError('You cannot validate your own contribution')
             
         # Save the validation with the current user as validator
         serializer.save(validator=self.request.user)

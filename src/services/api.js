@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 // Base API URL
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+// const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+
 
 // Create axios instance
 const api = axios.create({
@@ -70,8 +72,8 @@ api.interceptors.response.use(
 // Authentication API
 export const authService = {
   register: (userData) => api.post('/auth/register/', userData),
-  login: (username, password) => {
-    return api.post('/token/', { username, password })
+  login: (email, password) => {
+    return api.post('/token/', { email, password })
       .then(response => {
         const { access, refresh } = response.data;
         localStorage.setItem('token', access);
@@ -104,7 +106,7 @@ export const contributionService = {
       'Content-Type': 'multipart/form-data'
     }
   }),
-  getPendingValidations: () => api.get('/contributions/', { params: { to_validate: true } })
+  getPendingValidations: () => api.get('/contributions/', { params: { to_validate: true, status: 'pending' } })
 };
 
 // Validations API

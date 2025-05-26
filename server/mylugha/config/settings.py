@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-1ihaoz(opvwgkzctpows9@!z)3e1!v0-e8r(a!61&5pcs6q7@a
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -189,15 +189,22 @@ SIMPLE_JWT = {
 }
 
 # CORS settings
-CORS_ALLOW_ALL_ORIGINS = False  # Don't allow all origins in production
+CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins in development
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React development server
     "http://127.0.0.1:3000",
+    "http://localhost:3001",  # Alternative React ports
+    "http://127.0.0.1:3001",
+    "http://localhost:3002",  # Current React frontend port
+    "http://127.0.0.1:3002",
+    "http://localhost:8080",  # Django server
+    "http://127.0.0.1:8080",
 ]
 
 # For development only - more permissive CORS settings
 if DEBUG:
     CORS_ALLOW_CREDENTIALS = True
+    CORS_ALLOW_ALL_ORIGINS = True
     CORS_ALLOW_METHODS = [
         'DELETE',
         'GET',

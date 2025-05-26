@@ -16,7 +16,7 @@ class ContributionListView(generics.ListAPIView):
     API endpoint for listing contributions
     """
     serializer_class = ContributionListSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]  # Allow anyone to view contributions
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['language__code', 'type', 'content_type', 'status']
     search_fields = ['original_text', 'translated_text']
@@ -31,18 +31,20 @@ class ContributionListView(generics.ListAPIView):
         if language_code:
             queryset = queryset.filter(language__code=language_code)
             
-        # Filter by user's contributions if requested
-        my_contributions = self.request.query_params.get('my_contributions')
-        if my_contributions and my_contributions.lower() == 'true':
-            queryset = queryset.filter(user=self.request.user)
-            
-        # Filter contributions to validate if requested
-        to_validate = self.request.query_params.get('to_validate')
-        if to_validate and to_validate.lower() == 'true':
-            # Get contributions pending validation that the user hasn't validated yet
-            queryset = queryset.filter(status='pending').exclude(
-                validations__validator=self.request.user
-            )
+        # Only apply user-specific filters if user is authenticated
+        if self.request.user.is_authenticated:
+            # Filter by user's contributions if requested
+            my_contributions = self.request.query_params.get('my_contributions')
+            if my_contributions and my_contributions.lower() == 'true':
+                queryset = queryset.filter(user=self.request.user)
+                
+            # Filter contributions to validate if requested
+            to_validate = self.request.query_params.get('to_validate')
+            if to_validate and to_validate.lower() == 'true':
+                # Get contributions pending validation that the user hasn't validated yet
+                queryset = queryset.filter(status='pending').exclude(
+                    validations__validator=self.request.user
+                )
         
         return queryset
 

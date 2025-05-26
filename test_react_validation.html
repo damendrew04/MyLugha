@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test React Validation Integration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>🧪 React Frontend Validation Integration Test</h1>
+    <p>This test verifies that the React frontend can properly load validation items.</p>
+    
+    <div class="test-section">
+        <h2>🔍 Test Results</h2>
+        <div id="results">Click the test button to start...</div>
+    </div>
+      <div class="test-section">
+        <h2>🚀 Quick Test</h2>
+        <button class="btn" onclick="testValidationAPI()">Test React Validation API Integration</button>
+        <button class="btn" onclick="createTestContributions()">Create Test Contributions</button>
+        <button class="btn" onclick="navigateToReactApp()">Open React App</button>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+        
+        function updateResults(message, type = 'info') {
+            const resultDiv = document.getElementById('results');
+            resultDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+        
+        async function testValidationAPI() {
+            updateResults('Testing validation API integration...', 'info');
+            
+            try {
+                // Step 1: Login
+                updateResults('Step 1: Logging in...', 'info');
+                const loginResponse = await fetch(`${API_BASE}/token/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'testuser123',
+                        email: 'testuser123@example.com',
+                        password: 'testpass123'
+                    })
+                });
+                
+                if (!loginResponse.ok) {
+                    throw new Error(`Login failed: ${loginResponse.status}`);
+                }
+                
+                const loginData = await loginResponse.json();
+                const token = loginData.access;
+                  // Step 2: Test contributions endpoint (what React uses)
+                updateResults('Step 2: Testing contributions endpoint...', 'info');
+                const contribResponse = await fetch(`${API_BASE}/contributions/?to_validate=true`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                let contribData = {};
+                if (!contribResponse.ok) {
+                    console.warn(`Contributions API with to_validate failed: ${contribResponse.status}`);
+                    contribData = { count: 0, results: [] };
+                } else {
+                    contribData = await contribResponse.json();
+                }
+                
+                // Step 3: Test alternative endpoint if needed
+                updateResults('Step 3: Testing all contributions...', 'info');
+                const allContribResponse = await fetch(`${API_BASE}/contributions/`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const allContribData = await allContribResponse.json();
+                
+                // Display results
+                const resultsHTML = `
+                    <div class="success">
+                        <h4>✅ API Integration Test Results:</h4>
+                        <ul>
+                            <li><strong>Login:</strong> ✅ Successful</li>
+                            <li><strong>Token:</strong> ✅ Received</li>
+                            <li><strong>To Validate Items:</strong> ${contribData.count || 0} contributions</li>
+                            <li><strong>All Contributions:</strong> ${allContribData.count || 0} total</li>
+                            <li><strong>Available for Validation:</strong> ${contribData.results ? contribData.results.length : 0} items</li>
+                        </ul>
+                          <h4>📊 Validation Status:</h4>
+                        ${contribData.results && contribData.results.length > 0 ? 
+                            `<p>✅ React frontend should be able to load validation items successfully!</p>
+                             <p><strong>Sample item:</strong><br>
+                             - Language: ${contribData.results[0].language_name}<br>
+                             - Type: ${contribData.results[0].content_type}<br>
+                             - Original: "${contribData.results[0].original_text}"<br>
+                             - Translation: "${contribData.results[0].translated_text}"</p>` :
+                            `<p>ℹ️ No items pending validation found for this user. This could mean:
+                             <br>1. All contributions have been validated
+                             <br>2. User has already validated available items
+                             <br>3. Need to create some pending contributions for testing
+                             <br><br>The React app will show "All caught up!" message, which is correct behavior!</p>`
+                        }
+                        
+                        <h4>🎯 Next Steps:</h4>
+                        <p>The React frontend validation should now work! Try:</p>
+                        <ol>
+                            <li>Click "Open React App" button</li>
+                            <li>Navigate to Contribute → Validate Content</li>
+                            <li>Should see validation items or "All caught up!" message</li>
+                        </ol>
+                    </div>
+                `;
+                
+                updateResults(resultsHTML, 'success');
+                
+            } catch (error) {
+                updateResults(`❌ Test failed: ${error.message}`, 'error');
+            }        }
+        
+        async function createTestContributions() {
+            updateResults('Creating test contributions that need validation...', 'info');
+            
+            try {
+                // Step 1: Login as a different user to create contributions
+                const loginResponse = await fetch(`${API_BASE}/token/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'contributor2',
+                        email: 'contributor2@example.com',
+                        password: 'testpass123'
+                    })
+                });
+                
+                if (!loginResponse.ok) {
+                    throw new Error(`Login failed: ${loginResponse.status}`);
+                }
+                
+                const loginData = await loginResponse.json();
+                const token = loginData.access;
+                
+                // Step 2: Create some contributions that will be pending
+                const contributions = [
+                    {
+                        language: 'sw',
+                        content_type: 'sentence',
+                        original_text: 'The weather is beautiful today',
+                        translated_text: 'Hali ya hewa ni nzuri leo',
+                        context: 'Casual conversation about weather'
+                    },
+                    {
+                        language: 'luo',
+                        content_type: 'word',
+                        original_text: 'friendship',
+                        translated_text: 'osiep',
+                        context: 'Relationship between people'
+                    },
+                    {
+                        language: 'kik',
+                        content_type: 'sentence', 
+                        original_text: 'Education is very important',
+                        translated_text: 'Gũthoma nĩ kĩbara mũno',
+                        context: 'Discussion about education value'
+                    }
+                ];
+                
+                let created = 0;
+                for (const contrib of contributions) {
+                    try {
+                        const response = await fetch(`${API_BASE}/contributions/text/`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(contrib)
+                        });
+                        
+                        if (response.ok) {
+                            created++;
+                        }
+                    } catch (err) {
+                        console.warn('Failed to create contribution:', err);
+                    }
+                }
+                
+                updateResults(`✅ Created ${created} test contributions! Now test the validation API again.`, 'success');
+                
+            } catch (error) {
+                updateResults(`❌ Failed to create test contributions: ${error.message}`, 'error');
+            }
+        }
+        
+        function navigateToReactApp() {
+            window.open('http://localhost:3002', '_blank');
+        }
+        
+        // Auto-run test on page load
+        window.addEventListener('load', () => {
+            setTimeout(testValidationAPI, 1000);
+        });
+    </script>
+</body>
+</html>

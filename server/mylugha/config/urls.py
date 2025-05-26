@@ -19,9 +19,26 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from django.http import JsonResponse
+
+def api_root(request):
+    return JsonResponse({
+        'message': 'Welcome to MyLugha API',
+        'version': '1.0',
+        'endpoints': {
+            'auth': '/api/auth/',
+            'languages': '/api/languages/',
+            'contributions': '/api/contributions/',
+            'validations': '/api/validations/',
+            'token': '/api/token/',
+            'token_refresh': '/api/token/refresh/',
+            'admin': '/admin/',
+        }
+    })
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/', api_root, name='api_root'),
     
     # API endpoints
     path('api/auth/', include('accounts.urls')),

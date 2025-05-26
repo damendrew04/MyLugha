@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Contribution Submission Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background: #16a085;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #138f7a;
+        }
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .test-info {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .test-info h3 {
+            margin-top: 0;
+            color: #1976d2;
+        }
+        .debug-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Contribution Submission Fix</h1>
+        
+        <div class="test-info">
+            <h3>🧪 Testing Text Contribution Submission</h3>
+            <p>This test verifies that the field mapping fixes allow users to successfully submit text contributions.</p>
+            <p><strong>Expected:</strong> Submission should succeed with proper field mapping (translated_text, content_type, language ID, anonymous)</p>
+        </div>
+
+        <form id="contributionForm">
+            <div class="form-group">
+                <label for="language">Language:</label>
+                <select id="language" required>
+                    <option value="">Select a language...</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="contributionType">Contribution Type:</label>
+                <select id="contributionType" required>
+                    <option value="word">Word</option>
+                    <option value="phrase">Phrase</option>
+                    <option value="sentence">Sentence</option>
+                    <option value="story">Story</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="originalText">Original Text (English):</label>
+                <textarea id="originalText" placeholder="Enter the original text in English" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="translatedText">Translated Text:</label>
+                <textarea id="translatedText" placeholder="Enter the translation in the selected language" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="context">Context (optional):</label>
+                <textarea id="context" placeholder="Provide context about usage, cultural significance, etc."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="isAnonymous" style="width: auto; margin-right: 10px;">
+                    Submit anonymously
+                </label>
+            </div>
+
+            <button type="submit" id="submitBtn">Submit Contribution</button>
+            <button type="button" id="loginBtn" onclick="testLogin()">Login First</button>
+        </form>
+
+        <div id="result"></div>
+        <div id="debugInfo" class="debug-info" style="display: none;"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8080/api';
+        let authToken = localStorage.getItem('authToken');
+
+        // Load languages on page load
+        window.addEventListener('DOMContentLoaded', loadLanguages);
+
+        async function loadLanguages() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/languages/`);
+                const data = await response.json();
+                
+                const languageSelect = document.getElementById('language');
+                languageSelect.innerHTML = '<option value="">Select a language...</option>';
+                
+                data.results.forEach(lang => {
+                    const option = document.createElement('option');
+                    option.value = lang.id;
+                    option.textContent = `${lang.name} (${lang.code})`;
+                    option.dataset.code = lang.code;
+                    languageSelect.appendChild(option);
+                });
+                
+                showDebug('Languages loaded successfully', data);
+            } catch (error) {
+                showResult('Error loading languages: ' + error.message, 'error');
+                showDebug('Languages loading error', error);
+            }
+        }        async function testLogin() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="loading">Attempting login...</div>';
+
+            try {
+                // Try JWT token endpoint
+                const loginData = {
+                    username: 'testuser@example.com',  // Use email as username
+                    password: 'testpassword123'
+                };
+
+                const response = await fetch(`${API_BASE_URL}/token/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(loginData)
+                });
+
+                const data = await response.json();
+                showDebug('Login response', { status: response.status, data });
+
+                if (response.ok && data.access) {
+                    authToken = data.access;
+                    localStorage.setItem('authToken', authToken);
+                    showResult('✅ Login successful! You can now submit contributions.', 'success');
+                } else {
+                    showResult('❌ Login failed: ' + (data.detail || data.message || JSON.stringify(data)), 'error');
+                }
+            } catch (error) {
+                showResult('❌ Login error: ' + error.message, 'error');
+                showDebug('Login error', error);
+            }
+        }
+
+        document.getElementById('contributionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!authToken) {
+                showResult('❌ Please login first before submitting contributions.', 'error');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="loading">Submitting contribution...</div>';
+
+            try {
+                // Get form data
+                const languageSelect = document.getElementById('language');
+                const selectedOption = languageSelect.selectedOptions[0];
+                
+                const formData = {
+                    original_text: document.getElementById('originalText').value,
+                    translated_text: document.getElementById('translatedText').value, // ✅ Fixed field name
+                    context: document.getElementById('context').value,
+                    content_type: document.getElementById('contributionType').value, // ✅ Fixed field name
+                    language: parseInt(languageSelect.value), // ✅ Using language ID
+                    anonymous: document.getElementById('isAnonymous').checked // ✅ Fixed field name
+                };
+
+                showDebug('Submission data', formData);
+
+                const response = await fetch(`${API_BASE_URL}/contributions/text/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const responseData = await response.json();
+                showDebug('API Response', { 
+                    status: response.status, 
+                    statusText: response.statusText,
+                    data: responseData 
+                });
+
+                if (response.ok) {
+                    showResult('🎉 Contribution submitted successfully!', 'success');
+                    document.getElementById('contributionForm').reset();
+                } else {
+                    const errorMessage = responseData.detail || 
+                                       responseData.message || 
+                                       JSON.stringify(responseData) || 
+                                       'Unknown error occurred';
+                    showResult(`❌ Submission failed: ${errorMessage}`, 'error');
+                }
+
+            } catch (error) {
+                showResult('❌ Network error: ' + error.message, 'error');
+                showDebug('Network error', error);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Contribution';
+            }
+        });
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        function showDebug(title, data) {
+            const debugDiv = document.getElementById('debugInfo');
+            debugDiv.style.display = 'block';
+            debugDiv.textContent += `\n--- ${title} ---\n${JSON.stringify(data, null, 2)}\n`;
+        }
+    </script>
+</body>
+</html>

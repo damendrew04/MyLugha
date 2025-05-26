@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyLugha Complete Validation Flow Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .success { border-color: #4CAF50; background-color: #f9fff9; }
+        .error { border-color: #f44336; background-color: #fff9f9; }
+        .info { border-color: #2196F3; background-color: #f9f9ff; }
+        .warning { border-color: #ff9800; background-color: #fff9f0; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .status-card {
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        .test-progress {
+            margin: 10px 0;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 MyLugha Complete Validation Flow Test</h1>
+    <p>This comprehensive test verifies the entire validation workflow including login, data loading, and submission.</p>
+
+    <div class="test-section info">
+        <h3>📊 Test Overview</h3>
+        <div class="test-progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            <p id="progressText">Ready to start testing...</p>
+        </div>
+        
+        <div class="status-grid">
+            <div class="status-card" id="backendStatus">
+                <h4>🔧 Backend Status</h4>
+                <p id="backendInfo">Checking...</p>
+            </div>
+            <div class="status-card" id="frontendStatus">
+                <h4>⚛️ Frontend Status</h4>
+                <p id="frontendInfo">Checking...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>🚀 Automated Test Suite</h3>
+        <button onclick="runFullTestSuite()" id="runTestBtn">Run Complete Test Suite</button>
+        <button onclick="resetTests()" id="resetBtn">Reset Tests</button>
+        <div id="testResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>🔍 Individual Test Steps</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+            <button onclick="testStep1()" id="step1Btn">1. Backend Health</button>
+            <button onclick="testStep2()" id="step2Btn">2. Authentication</button>
+            <button onclick="testStep3()" id="step3Btn">3. Data Loading</button>
+            <button onclick="testStep4()" id="step4Btn">4. Validation Submit</button>
+            <button onclick="testStep5()" id="step5Btn">5. Frontend Integration</button>
+            <button onclick="testStep6()" id="step6Btn">6. End-to-End Flow</button>
+        </div>
+        <div id="individualResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>📋 Detailed Test Logs</h3>
+        <button onclick="clearLogs()">Clear Logs</button>
+        <pre id="testLogs"></pre>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+        const FRONTEND_BASE = 'http://localhost:3000';
+        const TEST_USER = {
+            email: 'testuser123@example.com',
+            password: 'testpass123'
+        };
+
+        let testState = {
+            authToken: null,
+            pendingContributions: [],
+            currentStep: 0,
+            totalSteps: 6,
+            results: []
+        };
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
+            testState.results.push(logEntry);
+            document.getElementById('testLogs').textContent = testState.results.join('\n');
+            console.log(logEntry);
+        }
+
+        function updateProgress(step, stepName) {
+            testState.currentStep = step;
+            const percentage = (step / testState.totalSteps) * 100;
+            document.getElementById('progressFill').style.width = `${percentage}%`;
+            document.getElementById('progressText').textContent = `Step ${step}/${testState.totalSteps}: ${stepName}`;
+        }
+
+        function clearLogs() {
+            testState.results = [];
+            document.getElementById('testLogs').textContent = '';
+            document.getElementById('testResults').innerHTML = '';
+            document.getElementById('individualResults').innerHTML = '';
+        }
+
+        function resetTests() {
+            testState = {
+                authToken: null,
+                pendingContributions: [],
+                currentStep: 0,
+                totalSteps: 6,
+                results: []
+            };
+            updateProgress(0, 'Ready to start testing...');
+            clearLogs();
+        }
+
+        async function makeRequest(url, options = {}) {
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(testState.authToken && { 'Authorization': `Bearer ${testState.authToken}` })
+                }
+            };
+
+            const finalOptions = { ...defaultOptions, ...options };
+            if (options.headers) {
+                finalOptions.headers = { ...defaultOptions.headers, ...options.headers };
+            }
+
+            log(`Making ${finalOptions.method || 'GET'} request to ${url}`);
+            
+            try {
+                const response = await fetch(url, finalOptions);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Success: ${response.status} ${response.statusText}`);
+                    return { success: true, data, status: response.status };
+                } else {
+                    log(`❌ Error: ${response.status} ${response.statusText} - ${JSON.stringify(data)}`);
+                    return { success: false, data, status: response.status };
+                }
+            } catch (error) {
+                log(`💥 Request failed: ${error.message}`);
+                return { success: false, error: error.message };
+            }
+        }
+
+        // Test Step 1: Backend Health Check
+        async function testStep1() {
+            updateProgress(1, 'Backend Health Check');
+            log('🔧 Testing backend health...');
+            
+            try {
+                const healthCheck = await makeRequest(`${API_BASE}/`);
+                const contributionsCheck = await makeRequest(`${API_BASE}/contributions/`);
+                
+                if (healthCheck.success && contributionsCheck.success) {
+                    document.getElementById('backendInfo').innerHTML = '✅ Backend is healthy and responsive';
+                    log('✅ Backend health check passed');
+                    return true;
+                } else {
+                    document.getElementById('backendInfo').innerHTML = '❌ Backend health check failed';
+                    log('❌ Backend health check failed');
+                    return false;
+                }
+            } catch (error) {
+                document.getElementById('backendInfo').innerHTML = `❌ Backend error: ${error.message}`;
+                log(`❌ Backend health check error: ${error.message}`);
+                return false;
+            }
+        }
+
+        // Test Step 2: Authentication
+        async function testStep2() {
+            updateProgress(2, 'Authentication Test');
+            log('🔐 Testing authentication...');
+            
+            try {
+                const response = await makeRequest(`${API_BASE}/token/`, {
+                    method: 'POST',
+                    body: JSON.stringify(TEST_USER)
+                });
+
+                if (response.success && response.data.access) {
+                    testState.authToken = response.data.access;
+                    log('✅ Authentication successful');
+                    return true;
+                } else {
+                    log(`❌ Authentication failed: ${JSON.stringify(response.data)}`);
+                    return false;
+                }
+            } catch (error) {
+                log(`❌ Authentication error: ${error.message}`);
+                return false;
+            }
+        }
+
+        // Test Step 3: Data Loading
+        async function testStep3() {
+            updateProgress(3, 'Data Loading Test');
+            log('📊 Testing data loading...');
+            
+            if (!testState.authToken) {
+                log('❌ No auth token available for data loading test');
+                return false;
+            }
+
+            try {
+                const response = await makeRequest(`${API_BASE}/contributions/?to_validate=true&status=pending`);
+                
+                if (response.success) {
+                    testState.pendingContributions = response.data.results || response.data || [];
+                    log(`✅ Data loading successful: ${testState.pendingContributions.length} pending contributions`);
+                    return true;
+                } else {
+                    log(`❌ Data loading failed: ${JSON.stringify(response.data)}`);
+                    return false;
+                }
+            } catch (error) {
+                log(`❌ Data loading error: ${error.message}`);
+                return false;
+            }
+        }
+
+        // Test Step 4: Validation Submission
+        async function testStep4() {
+            updateProgress(4, 'Validation Submission Test');
+            log('📝 Testing validation submission...');
+            
+            if (!testState.authToken) {
+                log('❌ No auth token available for validation submission test');
+                return false;
+            }
+
+            if (testState.pendingContributions.length === 0) {
+                log('⚠️ No pending contributions available for validation testing');
+                return false;
+            }
+
+            try {
+                const testContribution = testState.pendingContributions[0];
+                const validationData = {
+                    contribution: testContribution.id,
+                    is_valid: true,
+                    feedback: 'Automated test validation'
+                };
+
+                const response = await makeRequest(`${API_BASE}/validations/create/`, {
+                    method: 'POST',
+                    body: JSON.stringify(validationData)
+                });
+
+                if (response.success) {
+                    log('✅ Validation submission successful');
+                    return true;
+                } else {
+                    log(`❌ Validation submission failed: ${JSON.stringify(response.data)}`);
+                    return false;
+                }
+            } catch (error) {
+                log(`❌ Validation submission error: ${error.message}`);
+                return false;
+            }
+        }
+
+        // Test Step 5: Frontend Integration
+        async function testStep5() {
+            updateProgress(5, 'Frontend Integration Test');
+            log('⚛️ Testing frontend integration...');
+            
+            try {
+                const frontendResponse = await fetch(FRONTEND_BASE);
+                
+                if (frontendResponse.ok) {
+                    document.getElementById('frontendInfo').innerHTML = '✅ Frontend is accessible';
+                    log('✅ Frontend integration test passed');
+                    return true;
+                } else {
+                    document.getElementById('frontendInfo').innerHTML = '❌ Frontend not accessible';
+                    log('❌ Frontend integration test failed');
+                    return false;
+                }
+            } catch (error) {
+                document.getElementById('frontendInfo').innerHTML = `❌ Frontend error: ${error.message}`;
+                log(`❌ Frontend integration error: ${error.message}`);
+                return false;
+            }
+        }
+
+        // Test Step 6: End-to-End Flow
+        async function testStep6() {
+            updateProgress(6, 'End-to-End Flow Test');
+            log('🔄 Testing complete end-to-end flow...');
+            
+            // This is a summary step that verifies all components work together
+            const allTestsPassed = testState.authToken && testState.pendingContributions.length > 0;
+            
+            if (allTestsPassed) {
+                log('✅ End-to-end flow test completed successfully');
+                return true;
+            } else {
+                log('❌ End-to-end flow test failed - some components not working');
+                return false;
+            }
+        }
+
+        // Run Full Test Suite
+        async function runFullTestSuite() {
+            log('🚀 Starting complete test suite...');
+            resetTests();
+            
+            const testFunctions = [testStep1, testStep2, testStep3, testStep4, testStep5, testStep6];
+            const testNames = [
+                'Backend Health',
+                'Authentication', 
+                'Data Loading',
+                'Validation Submission',
+                'Frontend Integration',
+                'End-to-End Flow'
+            ];
+            
+            let results = [];
+            let allPassed = true;
+
+            for (let i = 0; i < testFunctions.length; i++) {
+                try {
+                    const passed = await testFunctions[i]();
+                    results.push({
+                        name: testNames[i],
+                        passed: passed,
+                        step: i + 1
+                    });
+                    
+                    if (!passed) allPassed = false;
+                    
+                    // Small delay between tests
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                } catch (error) {
+                    results.push({
+                        name: testNames[i],
+                        passed: false,
+                        error: error.message,
+                        step: i + 1
+                    });
+                    allPassed = false;
+                }
+            }
+
+            // Display final results
+            const resultsHTML = `
+                <div class="${allPassed ? 'success' : 'error'}">
+                    <h4>${allPassed ? '🎉 All Tests Passed!' : '❌ Some Tests Failed'}</h4>
+                    <div style="margin: 15px 0;">
+                        ${results.map(result => `
+                            <div style="margin: 5px 0; padding: 8px; border-radius: 4px; background: ${result.passed ? '#e8f5e8' : '#ffe8e8'};">
+                                <strong>Step ${result.step}: ${result.name}</strong> - 
+                                <span style="color: ${result.passed ? 'green' : 'red'};">
+                                    ${result.passed ? '✅ PASSED' : '❌ FAILED'}
+                                </span>
+                                ${result.error ? `<br><small>Error: ${result.error}</small>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 4px;">
+                        <h5>📊 Test Summary:</h5>
+                        <ul>
+                            <li><strong>Total Tests:</strong> ${results.length}</li>
+                            <li><strong>Passed:</strong> ${results.filter(r => r.passed).length}</li>
+                            <li><strong>Failed:</strong> ${results.filter(r => !r.passed).length}</li>
+                            <li><strong>Success Rate:</strong> ${Math.round((results.filter(r => r.passed).length / results.length) * 100)}%</li>
+                        </ul>
+                        
+                        ${allPassed ? 
+                            '<p style="color: green; font-weight: bold;">🎉 MyLugha validation functionality is working correctly!</p>' : 
+                            '<p style="color: red; font-weight: bold;">⚠️ Some issues detected. Please check the logs above for details.</p>'
+                        }
+                        
+                        <div style="margin-top: 10px;">
+                            <button onclick="window.open('${FRONTEND_BASE}', '_blank')" style="margin-right: 10px;">Open React App</button>
+                            <button onclick="window.open('file:///C:/Users/Admin/MyLugha/test_validation_submission.html', '_blank')">Open Individual Tests</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('testResults').innerHTML = resultsHTML;
+            log(`🏁 Test suite completed. Overall result: ${allPassed ? 'PASSED' : 'FAILED'}`);
+        }
+
+        // Auto-run status checks when page loads
+        window.addEventListener('load', async () => {
+            log('🔄 Initializing test environment...');
+            
+            // Quick status checks
+            setTimeout(async () => {
+                await testStep1(); // Backend health
+                await testStep5(); // Frontend health
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

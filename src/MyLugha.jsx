@@ -445,7 +445,7 @@ function LanguageSelectionPage({ onSelectLanguage }) {
       setIsLoading(true);
       try {
         const response = await languageService.getLanguages();
-        setLanguages(response.data);
+        setLanguages(response.data.results);
         setError(null);
       } catch (err) {
         console.error('Error fetching languages:', err);
@@ -637,16 +637,15 @@ function TextContributionForm({ language }) {
     // Set loading state
     setIsSubmitting(true);
     setSubmitError(null);
-    
-    try {
+      try {
       // Prepare the data to send to the API
       const data = {
         original_text: originalText,
-        translation: translatedText,
+        translated_text: translatedText,
         context: context,
-        type: contributionType,
-        language_code: language.code,
-        is_anonymous: isAnonymous
+        content_type: contributionType,
+        language: language.id || language.code, // Use language ID if available, fallback to code
+        anonymous: isAnonymous
       };
       
       // Call the API to submit the contribution
@@ -1037,8 +1036,7 @@ function ValidationForm({ language }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  
-  // Use useEffect to fetch validation items when component mounts
+    // Use useEffect to fetch validation items when component mounts
   useEffect(() => {
     const fetchValidationItems = async () => {
       setIsLoading(true);
@@ -1046,38 +1044,36 @@ function ValidationForm({ language }) {
         // Get contributions that need validation for the current language
         const response = await contributionService.getPendingValidations();
         
-        // Filter to only include items for the current language
-        const languageItems = response.data.filter(item => item.language_code === language.code);
+        // Check if response has the expected structure
+        console.log('API Response:', response.data);
         
-        setValidationItems(languageItems);
+        // Get results from response - handle different response structures
+        const contributions = response.data.results || response.data || [];
+        
+        // Filter to only include items for the current language
+        // Check for both language_code and language fields
+        const languageItems = contributions.filter(item => 
+          item.language_code === language.code || 
+          item.language === language.code ||
+          (item.language_name && item.language_name.toLowerCase() === language.name.toLowerCase())
+        );
+        
+        // Transform the data to match expected format
+        const formattedItems = languageItems.map(item => ({
+          id: item.id,
+          original: item.original_text || item.original,
+          translation: item.translated_text || item.translation,
+          type: item.content_type === 'audio' ? 'audio' : 'text',
+          submittedBy: item.user_name || item.submittedBy || 'Anonymous'
+        }));
+        
+        setValidationItems(formattedItems);
         setError(null);
       } catch (err) {
         console.error('Error fetching validation items:', err);
         setError('Failed to load items for validation. Please try again later.');
-        // Fallback to sample data
-        setValidationItems([
-          {
-            id: 1,
-            original: 'Habari yako',
-            translation: 'How are you',
-            type: 'text',
-            submittedBy: 'Amina H.'
-          },
-          {
-            id: 2,
-            original: 'Niko salama, asante',
-            translation: 'I am fine, thank you',
-            type: 'text',
-            submittedBy: 'Wangari M.'
-          },
-          {
-            id: 3,
-            original: 'Hii ni chakula kitamu sana',
-            translation: 'This food is very delicious',
-            type: 'audio',
-            submittedBy: 'Otieno K.'
-          }
-        ]);
+        // Don't use fallback data in production - show error instead
+        setValidationItems([]);
       } finally {
         setIsLoading(false);
       }
@@ -1085,8 +1081,7 @@ function ValidationForm({ language }) {
     
     fetchValidationItems();
   }, [language.code]); // Re-fetch when language changes
-  
-  const handleValidate = async (isValid) => {
+    const handleValidate = async (isValid) => {
     if (validationItems.length === 0) return;
     
     const item = validationItems[currentItem];
@@ -1095,7 +1090,7 @@ function ValidationForm({ language }) {
     try {
       // Submit validation to the API
       await validationService.createValidation({
-        contribution_id: item.id,
+        contribution: item.id, // Use 'contribution' not 'contribution_id' based on API schema
         is_valid: isValid,
         feedback: isValid ? '' : feedback
       });
@@ -1260,6 +1255,7 @@ function ValidationForm({ language }) {
 }
 
 function TranslationChallenge({ language }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [challenges] = useState([
     {
       id: 1,

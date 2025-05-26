@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyLugha Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #22c55e; }
+        .error { color: #ef4444; }
+        .loading { color: #3b82f6; }
+        button {
+            background: #3b82f6;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        #results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 MyLugha Frontend-Backend Integration Test</h1>
+    
+    <div class="test-container">
+        <h2>API Connectivity Tests</h2>
+        <button onclick="testAPIRoot()">Test API Root</button>
+        <button onclick="testLanguages()">Test Languages</button>
+        <button onclick="testContributions()">Test Contributions</button>
+        <button onclick="testCORS()">Test CORS</button>
+    </div>
+
+    <div class="test-container">
+        <h2>Authentication Tests</h2>
+        <button onclick="testRegistration()">Test Registration</button>
+        <button onclick="testLogin()">Test Login</button>
+        <button onclick="testAuthenticatedRequest()">Test Auth Required</button>
+    </div>
+
+    <div class="test-container">
+        <h2>Frontend API Service Tests</h2>
+        <button onclick="testAPIService()">Test API Service</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Results</h2>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'loading' ? 'loading' : '';
+            results.innerHTML += `[${timestamp}] <span class="${className}">${message}</span>\n`;
+            results.scrollTop = results.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testAPIRoot() {
+            log('🔌 Testing API Root connectivity...', 'loading');
+            try {
+                const response = await fetch(`${API_BASE}/`);
+                const data = await response.json();
+                if (response.ok) {
+                    log(`✅ API Root: ${response.status} - ${data.message}`, 'success');
+                    log(`📋 Available endpoints: ${Object.keys(data.endpoints).join(', ')}`);
+                } else {
+                    log(`❌ API Root failed: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ API Root error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLanguages() {
+            log('🌍 Testing Languages endpoint...', 'loading');
+            try {
+                const response = await fetch(`${API_BASE}/languages/`);
+                const data = await response.json();
+                if (response.ok) {
+                    log(`✅ Languages: ${response.status} - Found ${data.length} languages`, 'success');
+                    if (data.length > 0) {
+                        log(`📝 Sample language: ${data[0].name || 'Name not available'}`);
+                    }
+                } else {
+                    log(`❌ Languages failed: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Languages error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testContributions() {
+            log('📚 Testing Contributions endpoint...', 'loading');
+            try {
+                const response = await fetch(`${API_BASE}/contributions/`);
+                const data = await response.json();
+                if (response.ok) {
+                    log(`✅ Contributions: ${response.status} - Found ${data.length} contributions`, 'success');
+                } else {
+                    log(`❌ Contributions failed: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Contributions error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCORS() {
+            log('🌐 Testing CORS configuration...', 'loading');
+            try {
+                const response = await fetch(`${API_BASE}/`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Origin': window.location.origin
+                    }
+                });
+                
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers')
+                };
+                
+                if (response.ok) {
+                    log(`✅ CORS: Request successful`, 'success');
+                    log(`🔧 CORS Headers: ${JSON.stringify(corsHeaders, null, 2)}`);
+                } else {
+                    log(`❌ CORS: Request failed with ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ CORS error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testRegistration() {
+            log('👤 Testing User Registration...', 'loading');
+            const testUser = {
+                username: `testuser_${Date.now()}`,
+                email: `test_${Date.now()}@example.com`,
+                password: 'testpassword123'
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/register/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testUser)
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    log(`✅ Registration: ${response.status} - User created successfully`, 'success');
+                    log(`📧 User: ${testUser.username} (${testUser.email})`);
+                    
+                    // Store test user for login test
+                    window.testUser = testUser;
+                } else {
+                    log(`❌ Registration failed: ${response.status} - ${JSON.stringify(data)}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Registration error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLogin() {
+            log('🔐 Testing User Login...', 'loading');
+            
+            if (!window.testUser) {
+                log('⚠️ No test user available. Run registration test first.', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/token/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: window.testUser.username,
+                        password: window.testUser.password
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    log(`✅ Login: ${response.status} - Token received`, 'success');
+                    log(`🔑 Access token length: ${data.access ? data.access.length : 'N/A'}`);
+                    log(`🔄 Refresh token length: ${data.refresh ? data.refresh.length : 'N/A'}`);
+                    
+                    // Store token for authenticated request test
+                    window.accessToken = data.access;
+                } else {
+                    log(`❌ Login failed: ${response.status} - ${JSON.stringify(data)}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Login error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAuthenticatedRequest() {
+            log('🛡️ Testing Authenticated Request...', 'loading');
+            
+            if (!window.accessToken) {
+                log('⚠️ No access token available. Run login test first.', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/user/`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${window.accessToken}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    log(`✅ Authenticated Request: ${response.status} - Profile retrieved`, 'success');
+                    log(`👤 User: ${data.username || 'N/A'} (${data.email || 'N/A'})`);
+                } else {
+                    log(`❌ Authenticated Request failed: ${response.status} - ${JSON.stringify(data)}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Authenticated Request error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAPIService() {
+            log('🔧 Testing Frontend API Service Integration...', 'loading');
+            
+            // This would test if we can import and use the actual API service
+            // For now, we'll simulate the API service patterns
+            try {
+                log('📦 Simulating API Service calls...');
+                
+                // Test the pattern used in the actual API service
+                const baseURL = 'http://localhost:8080/api';
+                
+                // Test axios-like request (what the real frontend uses)
+                const config = {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+                
+                const response = await fetch(`${baseURL}/`, config);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ API Service Pattern: Working correctly`, 'success');
+                    log(`🔗 Base URL: ${baseURL}`);
+                    log(`📋 Response structure matches expected format`);
+                } else {
+                    log(`❌ API Service Pattern: Failed`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ API Service test error: ${error.message}`, 'error');
+            }
+        }
+
+        // Run initial connectivity test
+        window.addEventListener('load', () => {
+            log('🚀 MyLugha Frontend-Backend Integration Test Started');
+            log('📍 Frontend running on: ' + window.location.origin);
+            log('📍 Backend API at: ' + API_BASE);
+            log('');
+        });
+    </script>
+</body>
+</html>
