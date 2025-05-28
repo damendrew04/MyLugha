@@ -353,42 +353,14 @@ We welcome contributions from developers, linguists, translators, and community 
 - **Amina Hassan** - Community Manager (Language Advocacy)
 - **David Kiprop** - Research Lead (Linguistics PhD)
 
-### Partners
-- Kenya National Archives
-- Mozilla Foundation
-- University of Nairobi
-- Digital Africa Initiative
-
 ## 📞 Contact & Support
-
-### General Information
-- **Email**: info@mylugha.org
-- **Website**: https://mylugha.org
 - **GitHub**: https://github.com/GilbertAshivaka/MyLugha
-
-### Office Location
-Nairobi Innovation Hub  
-Westlands, Nairobi, Kenya  
-Phone: +254 712 345 678
-
-### Social Media
-- Twitter: [@MyLughaKE](https://twitter.com/MyLughaKE)
-- Facebook: [MyLugha Kenya](https://facebook.com/MyLughaKenya)
-- Instagram: [@mylugha_ke](https://instagram.com/mylugha_ke)
 
 ### Developer Contact
 **Gilbert Ashivaka** - Project Creator  
 GitHub: [@GilbertAshivaka](https://github.com/GilbertAshivaka)
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## 🙏 Acknowledgments
-
-- The vibrant Kenyan linguistic communities
-- Mozilla Foundation for open-source advocacy
-- University of Nairobi Linguistics Department
 - All contributors and validators on the platform
 - Open-source community for tools and libraries
 
