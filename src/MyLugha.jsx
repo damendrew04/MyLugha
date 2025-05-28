@@ -637,15 +637,16 @@ function TextContributionForm({ language }) {
     // Set loading state
     setIsSubmitting(true);
     setSubmitError(null);
-      try {
+    
+    try {
       // Prepare the data to send to the API
       const data = {
         original_text: originalText,
-        translated_text: translatedText,
+        translation: translatedText,
         context: context,
-        content_type: contributionType,
-        language: language.id || language.code, // Use language ID if available, fallback to code
-        anonymous: isAnonymous
+        type: contributionType,
+        language_code: language.code,
+        is_anonymous: isAnonymous
       };
       
       // Call the API to submit the contribution
