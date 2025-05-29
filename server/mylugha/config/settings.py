@@ -13,21 +13,25 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 import os
 from datetime import timedelta
-
+from dotenv import load_dotenv
+from decouple import config
+import dj_database_url 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_dotenv()
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-1ihaoz(opvwgkzctpows9@!z)3e1!v0-e8r(a!61&5pcs6q7@a'
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-1ihaoz(opvwgkzctpows9@!z)3e1!v0-e8r(a!61&5pcs6q7@a')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = ["*"]
+# Configure allowed hosts for production
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 
 
 # Application definition
@@ -93,25 +97,20 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# For development, using SQLite
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Database configuration with environment variable support
+DATABASE_URL = config('DATABASE_URL', default=None)
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL)
     }
-}
-
-# For production, uncomment and configure PostgreSQL
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': os.environ.get('DB_NAME', 'mylugha'),
-#         'USER': os.environ.get('DB_USER', 'mylugha_user'),
-#         'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-#         'HOST': os.environ.get('DB_HOST', 'localhost'),
-#         'PORT': os.environ.get('DB_PORT', '5432'),
-#     }
-# }
+else:
+    # Fallback to SQLite for local development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -147,8 +146,13 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Additional locations of static files for development
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+] if os.path.exists(os.path.join(BASE_DIR, 'static')) else []
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -181,7 +185,7 @@ REST_FRAMEWORK = {
 
 # Simple JWT settings
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -189,17 +193,13 @@ SIMPLE_JWT = {
 }
 
 # CORS settings
-CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins in development
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React development server
-    "http://127.0.0.1:3000",
-    "http://localhost:3001",  # Alternative React ports
-    "http://127.0.0.1:3001",
-    "http://localhost:3002",  # Current React frontend port
-    "http://127.0.0.1:3002",
-    "http://localhost:8080",  # Django server
-    "http://127.0.0.1:8080",
-]
+# More restrictive CORS settings for production
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=DEBUG, cast=bool)
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS', 
+    default="http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,http://localhost:3002,http://127.0.0.1:3002",
+    cast=lambda v: [s.strip() for s in v.split(',')]
+)
 
 # For development only - more permissive CORS settings
 if DEBUG:
@@ -256,3 +256,26 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
 
 # In development, use local file system for media files
 DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+
+# Vercel and Production Security Settings
+if not DEBUG:
+    # Security settings for production
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_REDIRECT_EXEMPT = []
+    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    X_FRAME_OPTIONS = 'DENY'
+    
+    # Trust Vercel proxy headers
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    USE_TZ = True
+    
+# Vercel-specific settings
+VERCEL_ENV = config('VERCEL_ENV', default=None)
+if VERCEL_ENV:
+    # Additional Vercel-specific configurations can go here
+    pass
