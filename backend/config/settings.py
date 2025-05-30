@@ -31,8 +31,8 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-1ihaoz(opvwgkzctpows9
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 # Configure allowed hosts for production
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
-
+# ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS=["*"]
 
 # Application definition
 
