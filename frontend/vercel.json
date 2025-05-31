@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "server/mylugha/config/wsgi.py",
+      "use": "@vercel/python",
+      "config": { "maxLambdaSize": "15mb", "runtime": "python3.9" }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/server/mylugha/staticfiles/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "server/mylugha/config/wsgi.py"
+    }
+  ],
+  "env": {
+    "DJANGO_SETTINGS_MODULE": "config.settings"
+  },
+  "functions": {
+    "server/mylugha/config/wsgi.py": {
+      "includeFiles": "server/mylugha/**"
+    }
+  }
+}

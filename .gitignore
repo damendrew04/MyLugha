@@ -1,0 +1,10 @@
+venv/
+venv38/
+env/
+.venv/
+.env/
+/staticfiles
+__pycache__/
+*.py[cod]
+*$py.class
+node_modules
