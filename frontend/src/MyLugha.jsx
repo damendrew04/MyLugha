@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Globe, Book, Users, Award, FileText, Mic, CheckCircle, Upload, Info, Home, User, UserPlus, LogIn, Menu, X, ChevronDown, ChevronRight, PlusCircle, ChevronLeft, Mail, MapPin, Phone, Play } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Globe, Book, Users, Award, FileText, Mic, CheckCircle, Upload, Info, Home, User, UserPlus, LogIn, Menu, X, ChevronDown, ChevronRight, PlusCircle, ChevronLeft, Mail, MapPin, Phone, Play, Square, Pause, MicOff} from 'lucide-react';
 import { languageService, contributionService, validationService, authService } from './services/api';
 import LoginPage from './LoginPage';
 import RegisterPage from './RegisterPage';
@@ -855,7 +855,8 @@ function ContributionOption({ active, onClick, label }) {
   );
 }
 
-function AudioContributionForm({ language }) {
+
+function AudioContributionForm({ language = { name: 'Swahili', code: 'sw' } }) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingComplete, setRecordingComplete] = useState(false);
   const [transcriptText, setTranscriptText] = useState('');
@@ -863,58 +864,172 @@ function AudioContributionForm({ language }) {
   const [context, setContext] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   
-  // Add new state variables for audio and API interactions
+  // Audio recording states
   const [audioBlob, setAudioBlob] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [permissionError, setPermissionError] = useState(null);
   
-  const toggleRecording = () => {
-    if (isRecording) {
-      setIsRecording(false);
-      setRecordingComplete(true);
+  // Refs for audio recording
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const streamRef = useRef(null);
+  const intervalRef = useRef(null);
+  const audioRef = useRef(null);
+
+  // Initialize audio stream when component mounts
+  useEffect(() => {
+    return () => {
+      // Cleanup on unmount
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
+  const startRecording = async () => {
+    try {
+      setPermissionError(null);
       
-      // In a real implementation, this would be the actual recorded audio
-      // For now, we'll just simulate having an audio blob
-      setAudioBlob(new Blob(['fake audio data'], { type: 'audio/wav' }));
-    } else {
-      setIsRecording(true);
-      // Simulate recording for demo
-      setTimeout(() => {
-        setIsRecording(false);
+      // Request microphone permission
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100
+        } 
+      });
+      
+      streamRef.current = stream;
+      
+      // Create MediaRecorder
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      });
+      
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { 
+          type: 'audio/webm;codecs=opus' 
+        });
+        setAudioBlob(audioBlob);
+        setAudioUrl(URL.createObjectURL(audioBlob));
         setRecordingComplete(true);
-        setAudioBlob(new Blob(['fake audio data'], { type: 'audio/wav' }));
-      }, 3000);
+        
+        // Stop all tracks
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+        }
+      };
+      
+      // Start recording
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      
+      // Start timer
+      intervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      setPermissionError('Unable to access microphone. Please check your browser permissions.');
     }
   };
-  
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    }
+  };
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
+  const playAudio = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        audioRef.current.play();
+        setIsPlaying(true);
+      }
+    }
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const calculateAudioDuration = (blob) => {
+    return new Promise((resolve) => {
+      const audio = new Audio();
+      audio.src = URL.createObjectURL(blob);
+      audio.addEventListener('loadedmetadata', () => {
+        resolve(audio.duration);
+      });
+    });
+  };
+
+  const handleSubmit = async () => {
     if (!audioBlob) return;
     
     setIsSubmitting(true);
     setSubmitError(null);
     
     try {
+      // Calculate audio duration and file size
+      const duration = await calculateAudioDuration(audioBlob);
+      const fileSizeKB = Math.round(audioBlob.size / 1024);
+      
       // Create FormData object for multipart/form-data request
       const formData = new FormData();
-      formData.append('audio_file', audioBlob, 'recording.wav');
-      formData.append('transcript', transcriptText);
-      formData.append('translation', translationText);
+      formData.append('audio_file', audioBlob, `recording_${Date.now()}.webm`);
+      formData.append('original_text', transcriptText);
+      formData.append('translated_text', translationText);
       formData.append('context', context);
       formData.append('language_code', language.code);
-      formData.append('is_anonymous', isAnonymous);
+      formData.append('anonymous', isAnonymous);
+      formData.append('type', 'audio');
+      formData.append('content_type', 'sentence'); // Default to sentence
+      formData.append('duration', duration.toString());
+      formData.append('file_size', fileSizeKB.toString());
       
-      // Submit to API
-      await contributionService.createAudioContribution(formData);
+      // Simulate API call (replace with actual API endpoint)
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Update state on success
       setSubmitSuccess(true);
-      setRecordingComplete(false);
-      setTranscriptText('');
-      setTranslationText('');
-      setContext('');
-      setAudioBlob(null);
+      resetForm();
       
       // Reset success message after 5 seconds
       setTimeout(() => setSubmitSuccess(false), 5000);
@@ -926,10 +1041,31 @@ function AudioContributionForm({ language }) {
       setIsSubmitting(false);
     }
   };
-  
+
+  const resetForm = () => {
+    setRecordingComplete(false);
+    setTranscriptText('');
+    setTranslationText('');
+    setContext('');
+    setAudioBlob(null);
+    setAudioUrl(null);
+    setRecordingTime(0);
+    setIsPlaying(false);
+    
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  };
+
+  const discardRecording = () => {
+    resetForm();
+    setPermissionError(null);
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6">
-      {/* Show success message if submission succeeded */}
+    <div className="bg-white rounded-lg shadow-md p-6">
+      {/* Success message */}
       {submitSuccess && (
         <div className="mb-4 bg-green-100 text-green-700 p-3 rounded-lg flex items-center">
           <CheckCircle className="h-5 w-5 mr-2" /> 
@@ -937,48 +1073,86 @@ function AudioContributionForm({ language }) {
         </div>
       )}
       
-      {/* Show error message if submission failed */}
-      {submitError && (
+      {/* Error messages */}
+      {(submitError || permissionError) && (
         <div className="mb-4 bg-red-100 text-red-700 p-3 rounded-lg">
-          {submitError}
+          {submitError || permissionError}
         </div>
       )}
       
       <div className="mb-8 text-center">
         <div className="mb-4">
           {!recordingComplete ? (
-            <button
-              type="button"
-              onClick={toggleRecording}
-              className={`w-24 h-24 rounded-full flex items-center justify-center ${
-                isRecording 
-                  ? 'bg-red-500 animate-pulse' 
-                  : 'bg-green-500 hover:bg-green-600'
-              } transition-colors`}
-            >
-              <Mic className="h-10 w-10 text-white" />
-            </button>
+            <div className="flex flex-col items-center">
+              <button
+                type="button"
+                onClick={toggleRecording}
+                disabled={!!permissionError}
+                className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-200 ${
+                  isRecording 
+                    ? 'bg-red-500 animate-pulse shadow-lg' 
+                    : 'bg-green-500 hover:bg-green-600 hover:shadow-lg'
+                } ${permissionError ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isRecording ? (
+                  <Square className="h-8 w-8 text-white" />
+                ) : (
+                  <Mic className="h-10 w-10 text-white" />
+                )}
+              </button>
+              {isRecording && (
+                <div className="mt-4 text-lg font-mono text-red-600">
+                  {formatTime(recordingTime)}
+                </div>
+              )}
+            </div>
           ) : (
             <div className="bg-green-100 text-green-700 p-3 rounded-lg inline-flex items-center">
-              <CheckCircle className="h-6 w-6 mr-2" /> Recording complete!
+              <CheckCircle className="h-6 w-6 mr-2" /> Recording complete! ({formatTime(recordingTime)})
             </div>
           )}
         </div>
+        
         <p className="text-gray-600">
           {isRecording 
-            ? 'Recording... Speak now' 
+            ? 'Recording... Press square to stop' 
             : !recordingComplete 
-              ? 'Press to start recording in ' + language.name
-              : 'Recording saved. Please add transcript and translation below.'
+              ? `Press to start recording in ${language.name}`
+              : 'Recording saved. You can play it back and add transcript below.'
           }
         </p>
       </div>
+      
+      {/* Audio playback controls */}
+      {recordingComplete && audioUrl && (
+        <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+          <div className="flex items-center justify-center space-x-4">
+            <button
+              type="button"
+              onClick={playAudio}
+              className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full transition-colors"
+            >
+              {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+            </button>
+            <span className="text-gray-600">
+              {isPlaying ? 'Playing...' : 'Click to play recording'}
+            </span>
+          </div>
+          <audio
+            ref={audioRef}
+            src={audioUrl}
+            onEnded={() => setIsPlaying(false)}
+            onPause={() => setIsPlaying(false)}
+            onPlay={() => setIsPlaying(true)}
+          />
+        </div>
+      )}
       
       {recordingComplete && (
         <>
           <div className="mb-6">
             <label htmlFor="transcript" className="block text-gray-700 font-medium mb-2">
-              Transcript ({language.name})
+              Transcript ({language.name}) *
             </label>
             <textarea 
               id="transcript"
@@ -993,7 +1167,7 @@ function AudioContributionForm({ language }) {
           
           <div className="mb-6">
             <label htmlFor="translation" className="block text-gray-700 font-medium mb-2">
-              English Translation
+              English Translation *
             </label>
             <textarea 
               id="translation"
@@ -1036,23 +1210,19 @@ function AudioContributionForm({ language }) {
           <div className="flex justify-between">
             <button 
               type="button"
-              onClick={() => {
-                setRecordingComplete(false);
-                setTranscriptText('');
-                setTranslationText('');
-                setAudioBlob(null);
-              }}
+              onClick={discardRecording}
               className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg font-medium transition-colors"
             >
               Discard & Re-record
             </button>
             
             <button 
-              type="submit"
-              disabled={isSubmitting}
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSubmitting || !transcriptText.trim() || !translationText.trim()}
               className={`${
-                isSubmitting 
-                  ? 'bg-gray-400' 
+                isSubmitting || !transcriptText.trim() || !translationText.trim()
+                  ? 'bg-gray-400 cursor-not-allowed' 
                   : 'bg-green-600 hover:bg-green-700'
               } text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center`}
             >
@@ -1068,9 +1238,11 @@ function AudioContributionForm({ language }) {
           </div>
         </>
       )}
-    </form>
+    </div>
   );
 }
+
+
 
 function ValidationForm({ language }) {
   const [validationItems, setValidationItems] = useState([]);
